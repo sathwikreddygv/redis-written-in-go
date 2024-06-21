@@ -1,2 +1,3 @@
-# redis-written-in-go![Uploading gaudmire (1).png…]()
+# redis-written-in-go
+![Alt text](images/gaudmire.png)
 
