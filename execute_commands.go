@@ -10,32 +10,36 @@ import (
 	"time"
 )
 
-type DataType int
-
-const (
-	StringType DataType = iota
-	ListType
-	HashType
-	SetType
-	SortedSetType
-)
-
-type sortedSetMember struct {
-	Member string
-	score  float64
-}
-
 type KeyValueStore struct {
 	Strings     map[string]string
 	Lists       map[string][]string
 	Hashes      map[string]map[string]string
-	Sets        map[string]map[string]struct{}
-	SortedSets  map[string][]sortedSetMember
 	Expirations map[string]time.Time
 	mu          sync.RWMutex
 	// CurrentTx   *Transaction
-	totalCommandsProcessed int
 	// connectedClients map[string]net.Conn
+}
+
+func checkExpiredStrings(key string, kv *KeyValueStore) bool {
+	if expirationTime, exists := kv.Expirations[key]; exists {
+		if time.Now().After(expirationTime) {
+			delete(kv.Expirations, key)
+			delete(kv.Strings, key)
+			return true
+		}
+	}
+	return false
+}
+
+func checkExpiredLists(key string, kv *KeyValueStore) bool {
+	if expirationTime, exists := kv.Expirations[key]; exists {
+		if time.Now().After(expirationTime) {
+			delete(kv.Expirations, key)
+			delete(kv.Lists, key)
+			return true
+		}
+	}
+	return false
 }
 
 func executeSET(args []string, kv *KeyValueStore) string {
@@ -83,6 +87,9 @@ func executeMGET(args []string, kv *KeyValueStore) string {
 	var final []string
 	for i := 0; i < len(args); i++ {
 		key := args[i]
+		if checkExpiredStrings(key, kv) {
+			return "(nil)"
+		}
 		if value, exists := kv.Strings[key]; exists {
 			final = append(final, value)
 		} else {
@@ -98,9 +105,10 @@ func executeGET(args []string, kv *KeyValueStore) string {
 		return "(error) ERR wrong number of arguments for 'GET' command"
 	}
 	key := args[0]
-	fmt.Print("GET key: ", kv.Strings)
+	if checkExpiredStrings(key, kv) {
+		return "(nil)"
+	}
 	if value, exists := kv.Strings[key]; exists {
-		fmt.Print("GET value: ", value)
 		return value
 	}
 	return "Error, key doesn't exist"
@@ -111,7 +119,7 @@ func executeRPUSH(args []string, kv *KeyValueStore) string {
 		// return writeRESP([]byte{})
 	} else {
 		key := args[0]
-		if _, exists := kv.Lists[key]; !exists {
+		if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 			kv.Lists[key] = make([]string, 0)
 		}
 
@@ -127,7 +135,7 @@ func executeLPUSH(args []string, kv *KeyValueStore) string {
 		// return writeRESP([]byte{})
 	} else {
 		key := args[0]
-		if _, exists := kv.Lists[key]; !exists {
+		if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 			kv.Lists[key] = make([]string, 0)
 		}
 
@@ -140,7 +148,7 @@ func executeLPUSH(args []string, kv *KeyValueStore) string {
 
 func executeRPOP(args []string, kv *KeyValueStore) string {
 	key := args[0]
-	if _, exists := kv.Lists[key]; !exists {
+	if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 		return "Error, key does not exist"
 	}
 
@@ -155,7 +163,7 @@ func executeRPOP(args []string, kv *KeyValueStore) string {
 
 func executeLPOP(args []string, kv *KeyValueStore) string {
 	key := args[0]
-	if _, exists := kv.Lists[key]; !exists {
+	if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 		return "Error, key does not exist"
 	}
 
@@ -169,7 +177,7 @@ func executeLPOP(args []string, kv *KeyValueStore) string {
 
 func executeLRANGE(args []string, kv *KeyValueStore) string {
 	key := args[0]
-	if _, exists := kv.Lists[key]; !exists {
+	if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 		return "Error, key does not exist"
 	}
 
@@ -204,7 +212,7 @@ func executeINCR(args []string, kv *KeyValueStore) string {
 		return "(error) ERR wrong number of arguments for 'INCR' command"
 	}
 	key := args[0]
-	if _, exists := kv.Strings[key]; !exists {
+	if _, exists := kv.Strings[key]; !exists || checkExpiredStrings(key, kv) {
 		kv.Strings[key] = "1"
 		return "(integer) 1"
 	} else {
@@ -223,7 +231,7 @@ func executeDECR(args []string, kv *KeyValueStore) string {
 		return "(error) ERR wrong number of arguments for 'DECR' command"
 	}
 	key := args[0]
-	if _, exists := kv.Strings[key]; !exists {
+	if _, exists := kv.Strings[key]; !exists || checkExpiredStrings(key, kv) {
 		kv.Strings[key] = "-1"
 		return "(integer) -1"
 	} else {
@@ -255,8 +263,67 @@ func executeDEL(args []string, kv *KeyValueStore) string {
 			delete(kv.Hashes, args[i])
 			num++
 		}
+		delete(kv.Expirations, args[i])
 	}
 	return fmt.Sprintf("(integer) %d", num)
+}
+
+func executeEXPIRE(args []string, kv *KeyValueStore) string {
+	if len(args) <= 1 {
+		return "(error) ERR wrong number of arguments for 'EXPIRE' command"
+	}
+	key := args[0]
+	expiration, err := strconv.Atoi(args[1])
+	if err != nil {
+		return "(error) ERR value is not an integer"
+	}
+	var key_exists bool
+	if _, exists := kv.Strings[key]; exists {
+		key_exists = true
+	} else if _, exists := kv.Lists[key]; exists {
+		key_exists = true
+	} else if _, exists := kv.Hashes[key]; exists {
+		key_exists = true
+	}
+
+	if key_exists {
+		kv.Expirations[key] = time.Now().Add(time.Duration(expiration) * time.Second)
+		return "(integer) 1"
+	}
+
+	return "(integer) 0"
+}
+
+func executeTTL(args []string, kv *KeyValueStore) string {
+	if len(args) < 1 {
+		return "(error) ERR wrong number of arguments for 'TTL' command"
+	}
+	key := args[0]
+	var key_exists bool
+	if _, exists := kv.Strings[key]; exists {
+		key_exists = true
+	} else if _, exists := kv.Lists[key]; exists {
+		key_exists = true
+	} else if _, exists := kv.Hashes[key]; exists {
+		key_exists = true
+	}
+
+	if key_exists {
+		if expirationTime, exists := kv.Expirations[key]; exists {
+			if time.Now().Before(expirationTime) {
+				ttl := time.Until(expirationTime).Seconds()
+				return fmt.Sprintf("(integer) %d", int(ttl))
+			}
+			delete(kv.Expirations, key)
+			delete(kv.Strings, key)
+			delete(kv.Lists, key)
+			delete(kv.Hashes, key)
+			return "(integer) -2"
+		}
+		return "(integer) -1"
+	}
+
+	return "(integer) -2"
 }
 
 func executePING(args []string, kv *KeyValueStore) string {
@@ -291,6 +358,10 @@ func executeCommand(cmd Command, conn io.ReadWriter, kv *KeyValueStore) string {
 		return executeLRANGE(cmd.Args, kv)
 	case "DEL":
 		return executeDEL(cmd.Args, kv)
+	case "EXPIRE":
+		return executeEXPIRE(cmd.Args, kv)
+	case "TTL":
+		return executeTTL(cmd.Args, kv)
 	default:
 		return executePING(cmd.Args, kv)
 	}

@@ -89,10 +89,6 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 	return string(bulkStr), nil
 }
 
-// reads a RESP encoded array from data and returns
-// the array, the delta, and the error
-// the function internally manipulates the buffer pointer
-// and keepts it at a point where the subsequent value can be read from.
 func readArray(c io.ReadWriter, buf *bytes.Buffer, rp *RESPParser) (interface{}, error) {
 	count, err := readLength(buf)
 	if err != nil {
@@ -136,9 +132,6 @@ func (rp *RESPParser) parseSingle() (interface{}, error) {
 		fmt.Print("parsing single\n")
 		n, err := rp.c.Read(rp.tbuf)
 		fmt.Print("parsed single ", n, "\n", string(rp.tbuf[:n]), "\n")
-		// this condition needs to be explicitly added to ensure
-		// we break the loop if we read `0` bytes from the socket
-		// implying end of the input
 		if n <= 0 {
 			break
 		}
@@ -180,11 +173,6 @@ func (rp *RESPParser) parseSingle() (interface{}, error) {
 		return readArray(rp.c, rp.buf, rp)
 	}
 
-	// this also captures the Cross Protocol Scripting attack.
-	// Since we do not support simple strings, anything that does
-	// not start with any of the above special chars will be a potential
-	// attack.
-	// Details: https://bou.ke/blog/hacking-developers/
 	log.Println("possible cross protocol scripting attack detected. dropping the request.")
 	return nil, errors.New("possible cross protocol scripting attack detected")
 }

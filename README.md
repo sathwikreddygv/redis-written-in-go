@@ -1,3 +1,3 @@
 # redis-written-in-go
-![Alt text](images/gaudmire.png)
+![godisDB](images/gaudmire.png)
 
