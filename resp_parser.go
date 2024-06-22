@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -125,35 +124,6 @@ func readStringUntilSr(buf *bytes.Buffer) (string, error) {
 }
 
 func (rp *RESPParser) parseSingle() (interface{}, error) {
-	for {
-		if bytes.Contains(rp.buf.Bytes(), []byte{'\r', '\n'}) {
-			break
-		}
-		fmt.Print("parsing single\n")
-		n, err := rp.c.Read(rp.tbuf)
-		fmt.Print("parsed single ", n, "\n", string(rp.tbuf[:n]), "\n")
-		if n <= 0 {
-			break
-		}
-		rp.buf.Write(rp.tbuf[:n])
-		if err != nil {
-			if err == io.EOF {
-				fmt.Print("breaking at EOF\n")
-				break
-			}
-			return nil, err
-		}
-
-		if bytes.Contains(rp.tbuf, []byte{'\r', '\n'}) {
-			fmt.Print("breaking at CRLF\n")
-			break
-		}
-
-		if rp.buf.Len() > (50 * 1024) {
-			return nil, fmt.Errorf("input too long. max input can be %d bytes", 50*1024)
-		}
-	}
-	fmt.Print("parsing single done\n")
 	b, err := rp.buf.ReadByte()
 	if err != nil {
 		return nil, err
@@ -173,8 +143,7 @@ func (rp *RESPParser) parseSingle() (interface{}, error) {
 		return readArray(rp.c, rp.buf, rp)
 	}
 
-	log.Println("possible cross protocol scripting attack detected. dropping the request.")
-	return nil, errors.New("possible cross protocol scripting attack detected")
+	return nil, errors.New("Invalid input")
 }
 
 // ParseRESP parses a RESP message and returns a list of commands and their arguments
@@ -187,37 +156,23 @@ func ParseRESP(conn io.ReadWriter, inputBuf []byte) ([]Command, error) {
 	rp := &RESPParser{
 		c:    conn,
 		buf:  buf,
-		tbuf: make([]byte, 512),
+		tbuf: make([]byte, 50*512),
 	}
 
-	var values []interface{} = make([]interface{}, 0)
-	for {
-		fmt.Print("here")
-		value, err := rp.parseSingle()
-		fmt.Print("poarse once", value)
-		if err != nil {
-			return nil, err
-		}
-		values = append(values, value)
-		if rp.buf.Len() == 0 {
-			break
-		}
+	value, err := rp.parseSingle()
+	if err != nil {
+		return nil, err
 	}
+
 	var cmds = make([]Command, 0)
-	for _, value := range values {
-		tokens, err := toArrayString(value.([]interface{}))
-		if err != nil {
-			return nil, err
-		}
-		cmd := strings.ToUpper(tokens[0])
-		cmds = append(cmds, Command{
-			Name: cmd,
-			Args: tokens[1:],
-		})
-
-		// if cmd == "ABORT" {
-		// 	hasABORT = true
-		// }
+	tokens, err := toArrayString(value.([]interface{}))
+	if err != nil {
+		return nil, err
 	}
+	cmd := strings.ToUpper(tokens[0])
+	cmds = append(cmds, Command{
+		Name: cmd,
+		Args: tokens[1:],
+	})
 	return cmds, nil
 }
