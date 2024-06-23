@@ -62,18 +62,6 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 		return "", err
 	}
 
-	var bytesRem int64 = len + 2 // 2 for \r\n
-	bytesRem = bytesRem - int64(buf.Len())
-	for bytesRem > 0 {
-		tbuf := make([]byte, bytesRem)
-		n, err := c.Read(tbuf)
-		if err != nil {
-			return "", nil
-		}
-		buf.Write(tbuf[:n])
-		bytesRem = bytesRem - int64(n)
-	}
-
 	bulkStr := make([]byte, len)
 	_, err = buf.Read(bulkStr)
 	if err != nil {
@@ -84,7 +72,6 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 	buf.ReadByte()
 	buf.ReadByte()
 
-	// reading `len` bytes as string
 	return string(bulkStr), nil
 }
 
