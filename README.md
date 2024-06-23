@@ -26,3 +26,10 @@ To set up godisDB:
 ```
 
 ### Usage
+1. redis-cli can be used as a client as godisDB also uses the Redis Serialization protocol (RESP).
+2. godisDB runs on port 6369 (Redis runs on 6379)
+3. Use this command to connect to godisDB
+```
+redis-cli -p 6369
+```
+4. Now you are all set to talk to the godisDB server. Try "PING" command to start with and you should receive a "PONG" as response from godisDB!
