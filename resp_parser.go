@@ -68,7 +68,7 @@ func readBulkString(c io.ReadWriter, buf *bytes.Buffer) (string, error) {
 		return "", err
 	}
 
-	// moving buffer pointer by 2 for \r and \n
+	// moving buffer pointer by 2 for CRLF
 	buf.ReadByte()
 	buf.ReadByte()
 
