@@ -26,10 +26,10 @@ func handleConnection(conn net.Conn, kv *KeyValueStore) {
 
 func main() {
 	listener, err := net.Listen("tcp", ":6369")
+	if err != nil {
+		fmt.Println("error listening")
+	}
 	for {
-		if err != nil {
-			fmt.Println("error listening")
-		}
 		c, err := listener.Accept()
 		if err != nil {
 			fmt.Println("error accepting connection")
