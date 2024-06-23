@@ -32,4 +32,4 @@ To set up godisDB:
 ```
 redis-cli -p 6369
 ```
-4. Now you are all set to talk to the godisDB server. Try "PING" command to start with and you should receive a "PONG" as response from godisDB!
+4. Now you are all set to talk to the godisDB server. Try "PING" command to start with and you should receive a "PONG" as response!
