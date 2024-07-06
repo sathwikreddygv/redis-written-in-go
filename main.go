@@ -29,18 +29,18 @@ func main() {
 	if err != nil {
 		fmt.Println("error listening")
 	}
+	kv := &KeyValueStore{
+		Strings:     make(map[string]string),
+		Lists:       make(map[string][]string),
+		Hashes:      make(map[string]map[string]string),
+		Expirations: make(map[string]time.Time),
+	}
 	for {
 		c, err := listener.Accept()
 		if err != nil {
 			fmt.Println("error accepting connection")
 		}
 		fmt.Println("client connected")
-		kv := &KeyValueStore{
-			Strings:     make(map[string]string),
-			Lists:       make(map[string][]string),
-			Hashes:      make(map[string]map[string]string),
-			Expirations: make(map[string]time.Time),
-		}
 		go handleConnection(c, kv)
 	}
 }
