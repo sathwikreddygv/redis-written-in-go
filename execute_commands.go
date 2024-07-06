@@ -126,7 +126,7 @@ func executeGET(args []string, kv *KeyValueStore) string {
 
 func executeRPUSH(args []string, kv *KeyValueStore) string {
 	if len(args) <= 1 {
-		// return writeRESP([]byte{})
+		return "(error) ERR wrong number of arguments for 'RPUSH' command"
 	} else {
 		kv.mu.Lock()
 		defer kv.mu.Unlock()
@@ -144,7 +144,7 @@ func executeRPUSH(args []string, kv *KeyValueStore) string {
 
 func executeLPUSH(args []string, kv *KeyValueStore) string {
 	if len(args) <= 1 {
-		// return writeRESP([]byte{})
+		return "(error) ERR wrong number of arguments for 'LPUSH' command"
 	} else {
 		kv.mu.Lock()
 		defer kv.mu.Unlock()
