@@ -234,6 +234,15 @@ func executeINCR(args []string, kv *KeyValueStore) string {
 	key := args[0]
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
+
+	if _, exists := kv.Lists[key]; exists {
+		return "(error) WRONGTYPE Operation against a key holding the wrong kind of value"
+	}
+
+	if _, exists := kv.Hashes[key]; exists {
+		return "(error) WRONGTYPE Operation against a key holding the wrong kind of value"
+	}
+
 	if _, exists := kv.Strings[key]; !exists || checkExpiredStrings(key, kv) {
 		kv.Strings[key] = "1"
 		return "(integer) 1"
