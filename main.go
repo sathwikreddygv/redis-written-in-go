@@ -35,6 +35,11 @@ func main() {
 		Hashes:      make(map[string]map[string]string),
 		Expirations: make(map[string]time.Time),
 	}
+	err = loadFromDisk("aof.gob", kv)
+	if err != nil {
+		fmt.Println("Error loading from file:", err)
+	}
+	// go backgroundSavetoDisk()
 	for {
 		c, err := listener.Accept()
 		if err != nil {

@@ -369,6 +369,14 @@ func executePING(args []string, kv *KeyValueStore) string {
 	return "PONG"
 }
 
+func executeSAVE(args []string, kv *KeyValueStore) string {
+	err := saveToDisk(kv)
+	if err != nil {
+		return "(error) ERR Could not save to disk"
+	}
+	return "OK"
+}
+
 func executeCommand(cmd Command, conn io.ReadWriter, kv *KeyValueStore) string {
 	switch cmd.Name {
 	case "SET":
@@ -403,6 +411,8 @@ func executeCommand(cmd Command, conn io.ReadWriter, kv *KeyValueStore) string {
 		return executeTTL(cmd.Args, kv)
 	case "PING":
 		return executePING(cmd.Args, kv)
+	case "SAVE":
+		return executeSAVE(cmd.Args, kv)
 	default:
 		return "(error) ERR unknown command"
 	}
