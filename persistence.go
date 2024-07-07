@@ -46,7 +46,7 @@ func periodicSave(data interface{}, interval time.Duration) {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Print("Saving to disk...")
+			fmt.Print("\nSaving to disk...\n")
 			if err := saveToDisk(data); err != nil {
 				fmt.Println("Error saving to file:", err)
 			}
