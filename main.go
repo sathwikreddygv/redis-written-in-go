@@ -39,7 +39,10 @@ func main() {
 	if err != nil {
 		fmt.Println("Error loading from file:", err)
 	}
-	// go backgroundSavetoDisk()
+
+	// Start the periodic save function in a goroutine
+	go periodicSave(kv, 10*time.Second)
+
 	for {
 		c, err := listener.Accept()
 		if err != nil {

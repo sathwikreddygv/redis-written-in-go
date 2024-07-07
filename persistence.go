@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/gob"
+	"fmt"
 	"os"
+	"time"
 )
 
 func saveToDisk(data interface{}) error {
@@ -37,4 +39,17 @@ func loadFromDisk(filename string, data interface{}) error {
 	return nil
 }
 
-// func backgroundSavetoDisk
+func periodicSave(data interface{}, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			fmt.Print("Saving to disk...")
+			if err := saveToDisk(data); err != nil {
+				fmt.Println("Error saving to file:", err)
+			}
+		}
+	}
+}
