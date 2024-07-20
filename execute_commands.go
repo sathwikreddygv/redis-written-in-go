@@ -3,7 +3,9 @@ package main
 import (
 	// "bytes"
 	"fmt"
-	"io"
+	"slices"
+
+	// "io"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,7 +44,7 @@ func checkExpiredLists(key string, kv *KeyValueStore) bool {
 	return false
 }
 
-func executeSET(args []string, kv *KeyValueStore) string {
+func executeSET(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) <= 1 {
 		return "(error) ERR wrong number of arguments for 'SET' command"
 	} else {
@@ -55,7 +57,7 @@ func executeSET(args []string, kv *KeyValueStore) string {
 	return "OK"
 }
 
-func executeSETNX(args []string, kv *KeyValueStore) string {
+func executeSETNX(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) <= 1 {
 		return "(error) ERR wrong number of arguments for 'SETNX' command"
 	} else {
@@ -70,7 +72,7 @@ func executeSETNX(args []string, kv *KeyValueStore) string {
 	return "OK"
 }
 
-func executeMSET(args []string, kv *KeyValueStore) string {
+func executeMSET(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args)%2 != 0 {
 		return "(error) ERR wrong number of arguments for 'MSET' command"
 	} else {
@@ -85,7 +87,7 @@ func executeMSET(args []string, kv *KeyValueStore) string {
 	return "OK"
 }
 
-func executeMGET(args []string, kv *KeyValueStore) string {
+func executeMGET(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) < 1 {
 		return "(error) ERR wrong number of arguments for 'MGET' command"
 	}
@@ -108,7 +110,7 @@ func executeMGET(args []string, kv *KeyValueStore) string {
 	return strings.Join(final, " ")
 }
 
-func executeGET(args []string, kv *KeyValueStore) string {
+func executeGET(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) < 1 {
 		return "(error) ERR wrong number of arguments for 'GET' command"
 	}
@@ -124,7 +126,7 @@ func executeGET(args []string, kv *KeyValueStore) string {
 	return "Error, key doesn't exist"
 }
 
-func executeRPUSH(args []string, kv *KeyValueStore) string {
+func executeRPUSH(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) <= 1 {
 		return "(error) ERR wrong number of arguments for 'RPUSH' command"
 	} else {
@@ -142,7 +144,7 @@ func executeRPUSH(args []string, kv *KeyValueStore) string {
 	return "OK"
 }
 
-func executeLPUSH(args []string, kv *KeyValueStore) string {
+func executeLPUSH(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) <= 1 {
 		return "(error) ERR wrong number of arguments for 'LPUSH' command"
 	} else {
@@ -160,7 +162,7 @@ func executeLPUSH(args []string, kv *KeyValueStore) string {
 	return "OK"
 }
 
-func executeRPOP(args []string, kv *KeyValueStore) string {
+func executeRPOP(args []string, kv *KeyValueStore, client *Client) string {
 	key := args[0]
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
@@ -177,7 +179,7 @@ func executeRPOP(args []string, kv *KeyValueStore) string {
 	return element
 }
 
-func executeLPOP(args []string, kv *KeyValueStore) string {
+func executeLPOP(args []string, kv *KeyValueStore, client *Client) string {
 	key := args[0]
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
@@ -193,7 +195,7 @@ func executeLPOP(args []string, kv *KeyValueStore) string {
 	return element
 }
 
-func executeLRANGE(args []string, kv *KeyValueStore) string {
+func executeLRANGE(args []string, kv *KeyValueStore, client *Client) string {
 	key := args[0]
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
@@ -227,7 +229,7 @@ func executeLRANGE(args []string, kv *KeyValueStore) string {
 	return str
 }
 
-func executeINCR(args []string, kv *KeyValueStore) string {
+func executeINCR(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) > 1 {
 		return "(error) ERR wrong number of arguments for 'INCR' command"
 	}
@@ -257,7 +259,7 @@ func executeINCR(args []string, kv *KeyValueStore) string {
 	}
 }
 
-func executeDECR(args []string, kv *KeyValueStore) string {
+func executeDECR(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) > 1 {
 		return "(error) ERR wrong number of arguments for 'DECR' command"
 	}
@@ -278,7 +280,7 @@ func executeDECR(args []string, kv *KeyValueStore) string {
 	}
 }
 
-func executeDEL(args []string, kv *KeyValueStore) string {
+func executeDEL(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) < 1 {
 		return "(error) ERR wrong number of arguments for 'DEL' command"
 	}
@@ -303,7 +305,7 @@ func executeDEL(args []string, kv *KeyValueStore) string {
 	return fmt.Sprintf("(integer) %d", num)
 }
 
-func executeEXPIRE(args []string, kv *KeyValueStore) string {
+func executeEXPIRE(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) <= 1 {
 		return "(error) ERR wrong number of arguments for 'EXPIRE' command"
 	}
@@ -331,7 +333,7 @@ func executeEXPIRE(args []string, kv *KeyValueStore) string {
 	return "(integer) 0"
 }
 
-func executeTTL(args []string, kv *KeyValueStore) string {
+func executeTTL(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) < 1 {
 		return "(error) ERR wrong number of arguments for 'TTL' command"
 	}
@@ -365,11 +367,11 @@ func executeTTL(args []string, kv *KeyValueStore) string {
 	return "(integer) -2"
 }
 
-func executePING(args []string, kv *KeyValueStore) string {
+func executePING(args []string, kv *KeyValueStore, client *Client) string {
 	return "PONG"
 }
 
-func executeSAVE(args []string, kv *KeyValueStore) string {
+func executeSAVE(args []string, kv *KeyValueStore, client *Client) string {
 	err := saveToDisk(kv)
 	if err != nil {
 		return "(error) ERR Could not save to disk"
@@ -377,53 +379,99 @@ func executeSAVE(args []string, kv *KeyValueStore) string {
 	return "OK"
 }
 
-func executeCommand(cmd Command, conn io.ReadWriter, kv *KeyValueStore) string {
+func executeMULTI(args []string, kv *KeyValueStore, client *Client) string {
+	if client.isTxn {
+		return "(error) ERR MULTI calls can not be nested"
+	} else {
+		client.isTxn = true
+	}
+	return "OK"
+}
+
+func executeDISCARD(args []string, kv *KeyValueStore, client *Client) string {
+	if client.isTxn {
+		client.queuedCommands = []Command{}
+		client.isTxn = false
+	} else {
+		return "(error) ERR DISCARD without MULTI"
+	}
+	return "OK"
+}
+
+func executeEXEC(args []string, kv *KeyValueStore, client *Client) string {
+	if client.isTxn {
+		client.isTxn = false
+		kv.mu.Lock()
+		defer kv.mu.Lock()
+		executeCommands(client, client.queuedCommands, kv)
+	} else {
+		return "(error) ERR EXEC without MULTI"
+	}
+	return "OK"
+}
+
+func executeCommand(cmd Command, client *Client, kv *KeyValueStore) string {
 	switch cmd.Name {
 	case "SET":
-		return executeSET(cmd.Args, kv)
+		return executeSET(cmd.Args, kv, client)
 	case "GET":
-		return executeGET(cmd.Args, kv)
+		return executeGET(cmd.Args, kv, client)
 	case "SETNX":
-		return executeSETNX(cmd.Args, kv)
+		return executeSETNX(cmd.Args, kv, client)
 	case "MSET":
-		return executeMSET(cmd.Args, kv)
+		return executeMSET(cmd.Args, kv, client)
 	case "MGET":
-		return executeMGET(cmd.Args, kv)
+		return executeMGET(cmd.Args, kv, client)
 	case "INCR":
-		return executeINCR(cmd.Args, kv)
+		return executeINCR(cmd.Args, kv, client)
 	case "DECR":
-		return executeDECR(cmd.Args, kv)
+		return executeDECR(cmd.Args, kv, client)
 	case "RPUSH":
-		return executeRPUSH(cmd.Args, kv)
+		return executeRPUSH(cmd.Args, kv, client)
 	case "LPUSH":
-		return executeLPUSH(cmd.Args, kv)
+		return executeLPUSH(cmd.Args, kv, client)
 	case "RPOP":
-		return executeRPOP(cmd.Args, kv)
+		return executeRPOP(cmd.Args, kv, client)
 	case "LPOP":
-		return executeLPOP(cmd.Args, kv)
+		return executeLPOP(cmd.Args, kv, client)
 	case "LRANGE":
-		return executeLRANGE(cmd.Args, kv)
+		return executeLRANGE(cmd.Args, kv, client)
 	case "DEL":
-		return executeDEL(cmd.Args, kv)
+		return executeDEL(cmd.Args, kv, client)
 	case "EXPIRE":
-		return executeEXPIRE(cmd.Args, kv)
+		return executeEXPIRE(cmd.Args, kv, client)
 	case "TTL":
-		return executeTTL(cmd.Args, kv)
+		return executeTTL(cmd.Args, kv, client)
 	case "PING":
-		return executePING(cmd.Args, kv)
+		return executePING(cmd.Args, kv, client)
 	case "SAVE":
-		return executeSAVE(cmd.Args, kv)
+		return executeSAVE(cmd.Args, kv, client)
+	case "MULTI":
+		return executeMULTI(cmd.Args, kv, client)
+	case "EXEC":
+		return executeEXEC(cmd.Args, kv, client)
+	case "DISCARD":
+		return executeDISCARD(cmd.Args, kv, client)
 	default:
 		return "(error) ERR unknown command"
 	}
 }
 
-func executeCommands(conn io.ReadWriter, commands []Command, kv *KeyValueStore) {
+func executeCommands(client *Client, commands []Command, kv *KeyValueStore) {
 	// var response []byte
 	// buf := bytes.NewBuffer(response)
+	conn := client.conn
 	for _, cmd := range commands {
 		// buf.Write(executeCommand(cmd, conn, kv))
-		response := executeCommand(cmd, conn, kv)
+		response := ""
+		splCommands := []string{"MULTI", "EXEC", "DISCARD"}
+		fmt.Print(splCommands, cmd.Name)
+		if !slices.Contains(splCommands, cmd.Name) && client.isTxn {
+			client.queuedCommands = append(client.queuedCommands, cmd)
+			response = "QUEUED"
+		} else {
+			response = executeCommand(cmd, client, kv)
+		}
 		fmt.Print("print response: ", response)
 		if response != "" {
 			err := WriteBulkString(response, conn)

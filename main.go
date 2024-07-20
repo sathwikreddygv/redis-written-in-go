@@ -6,7 +6,14 @@ import (
 	"time"
 )
 
-func handleConnection(conn net.Conn, kv *KeyValueStore) {
+type Client struct {
+	conn           net.Conn
+	isTxn          bool
+	queuedCommands []Command
+}
+
+func handleConnection(client *Client, kv *KeyValueStore) {
+	conn := client.conn
 	defer conn.Close()
 	fmt.Printf("Client connected: %s\n", conn.RemoteAddr().String())
 	for {
@@ -20,7 +27,7 @@ func handleConnection(conn net.Conn, kv *KeyValueStore) {
 		}
 		commands, err := ParseRESP(conn, buf[:n])
 		fmt.Print(commands)
-		executeCommands(conn, commands, kv)
+		executeCommands(client, commands, kv)
 	}
 }
 
@@ -45,10 +52,11 @@ func main() {
 
 	for {
 		c, err := listener.Accept()
+		client := &Client{conn: c, isTxn: false}
 		if err != nil {
 			fmt.Println("error accepting connection")
 		}
 		fmt.Println("client connected")
-		go handleConnection(c, kv)
+		go handleConnection(client, kv)
 	}
 }

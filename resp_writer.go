@@ -22,3 +22,7 @@ func WriteBulkString(s string, conn io.ReadWriter) error {
 	_, err := conn.Write([]byte("\r\n"))
 	return err
 }
+
+func WriteArray(s string, conn io.ReadWriter) error {
+	return nil
+}
