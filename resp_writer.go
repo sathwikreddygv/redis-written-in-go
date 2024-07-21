@@ -11,10 +11,6 @@ type Writer struct {
 
 func WriteBulkString(s string, conn io.ReadWriter) error {
 	val := []byte(s)
-	if val == nil {
-		// _, err := w.Write(nilBulk)
-		// return err
-	}
 	conn.Write([]byte("$"))
 	conn.Write(strconv.AppendUint(nil, uint64(len(val)), 10))
 	conn.Write([]byte("\r\n"))
@@ -23,6 +19,13 @@ func WriteBulkString(s string, conn io.ReadWriter) error {
 	return err
 }
 
-func WriteArray(s string, conn io.ReadWriter) error {
-	return nil
+func WriteArray(result []string, conn io.ReadWriter) error {
+	conn.Write([]byte("*"))
+	conn.Write(strconv.AppendUint(nil, uint64(len(result)), 10))
+	conn.Write([]byte("\r\n"))
+	var err error
+	for i := 0; i < len(result); i++ {
+		err = WriteBulkString(result[i], conn)
+	}
+	return err
 }

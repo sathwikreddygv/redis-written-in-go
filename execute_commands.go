@@ -50,8 +50,10 @@ func executeSET(args []string, kv *KeyValueStore, client *Client) string {
 	} else {
 		key := args[0]
 		value := args[1]
-		kv.mu.Lock()
-		defer kv.mu.Unlock()
+		if !client.isTxn {
+			kv.mu.Lock()
+			defer kv.mu.Unlock()
+		}
 		kv.Strings[key] = value
 	}
 	return "OK"
@@ -63,8 +65,10 @@ func executeSETNX(args []string, kv *KeyValueStore, client *Client) string {
 	} else {
 		key := args[0]
 		value := args[1]
-		kv.mu.Lock()
-		defer kv.mu.Unlock()
+		if !client.isTxn {
+			kv.mu.Lock()
+			defer kv.mu.Unlock()
+		}
 		if _, exists := kv.Strings[key]; !exists {
 			kv.Strings[key] = value
 		}
@@ -76,8 +80,10 @@ func executeMSET(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args)%2 != 0 {
 		return "(error) ERR wrong number of arguments for 'MSET' command"
 	} else {
-		kv.mu.Lock()
-		defer kv.mu.Unlock()
+		if !client.isTxn {
+			kv.mu.Lock()
+			defer kv.mu.Unlock()
+		}
 		for i := 0; i < len(args); i += 2 {
 			key := args[i]
 			value := args[i+1]
@@ -93,8 +99,10 @@ func executeMGET(args []string, kv *KeyValueStore, client *Client) string {
 	}
 
 	var final []string
-	kv.mu.RLock()
-	defer kv.mu.RUnlock()
+	if !client.isTxn {
+		kv.mu.RLock()
+		defer kv.mu.RUnlock()
+	}
 	for i := 0; i < len(args); i++ {
 		key := args[i]
 		if checkExpiredStrings(key, kv) {
@@ -115,8 +123,10 @@ func executeGET(args []string, kv *KeyValueStore, client *Client) string {
 		return "(error) ERR wrong number of arguments for 'GET' command"
 	}
 	key := args[0]
-	kv.mu.RLock()
-	defer kv.mu.RUnlock()
+	if !client.isTxn {
+		kv.mu.RLock()
+		defer kv.mu.RUnlock()
+	}
 	if checkExpiredStrings(key, kv) {
 		return "(nil)"
 	}
@@ -130,8 +140,10 @@ func executeRPUSH(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) <= 1 {
 		return "(error) ERR wrong number of arguments for 'RPUSH' command"
 	} else {
-		kv.mu.Lock()
-		defer kv.mu.Unlock()
+		if !client.isTxn {
+			kv.mu.Lock()
+			defer kv.mu.Unlock()
+		}
 		key := args[0]
 		if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 			kv.Lists[key] = make([]string, 0)
@@ -148,8 +160,10 @@ func executeLPUSH(args []string, kv *KeyValueStore, client *Client) string {
 	if len(args) <= 1 {
 		return "(error) ERR wrong number of arguments for 'LPUSH' command"
 	} else {
-		kv.mu.Lock()
-		defer kv.mu.Unlock()
+		if !client.isTxn {
+			kv.mu.Lock()
+			defer kv.mu.Unlock()
+		}
 		key := args[0]
 		if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 			kv.Lists[key] = make([]string, 0)
@@ -164,8 +178,10 @@ func executeLPUSH(args []string, kv *KeyValueStore, client *Client) string {
 
 func executeRPOP(args []string, kv *KeyValueStore, client *Client) string {
 	key := args[0]
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
+	if !client.isTxn {
+		kv.mu.Lock()
+		defer kv.mu.Unlock()
+	}
 	if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 		return "Error, key does not exist"
 	}
@@ -181,8 +197,10 @@ func executeRPOP(args []string, kv *KeyValueStore, client *Client) string {
 
 func executeLPOP(args []string, kv *KeyValueStore, client *Client) string {
 	key := args[0]
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
+	if !client.isTxn {
+		kv.mu.Lock()
+		defer kv.mu.Unlock()
+	}
 	if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 		return "Error, key does not exist"
 	}
@@ -197,8 +215,10 @@ func executeLPOP(args []string, kv *KeyValueStore, client *Client) string {
 
 func executeLRANGE(args []string, kv *KeyValueStore, client *Client) string {
 	key := args[0]
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
+	if !client.isTxn {
+		kv.mu.Lock()
+		defer kv.mu.Unlock()
+	}
 	if _, exists := kv.Lists[key]; !exists || checkExpiredLists(key, kv) {
 		return "Error, key does not exist"
 	}
@@ -234,8 +254,10 @@ func executeINCR(args []string, kv *KeyValueStore, client *Client) string {
 		return "(error) ERR wrong number of arguments for 'INCR' command"
 	}
 	key := args[0]
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
+	if !client.isTxn {
+		kv.mu.Lock()
+		defer kv.mu.Unlock()
+	}
 
 	if _, exists := kv.Lists[key]; exists {
 		return "(error) WRONGTYPE Operation against a key holding the wrong kind of value"
@@ -264,8 +286,10 @@ func executeDECR(args []string, kv *KeyValueStore, client *Client) string {
 		return "(error) ERR wrong number of arguments for 'DECR' command"
 	}
 	key := args[0]
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
+	if !client.isTxn {
+		kv.mu.Lock()
+		defer kv.mu.Unlock()
+	}
 	if _, exists := kv.Strings[key]; !exists || checkExpiredStrings(key, kv) {
 		kv.Strings[key] = "-1"
 		return "(integer) -1"
@@ -285,8 +309,10 @@ func executeDEL(args []string, kv *KeyValueStore, client *Client) string {
 		return "(error) ERR wrong number of arguments for 'DEL' command"
 	}
 	var num int
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
+	if !client.isTxn {
+		kv.mu.Lock()
+		defer kv.mu.Unlock()
+	}
 	for i := 0; i < len(args); i++ {
 		if _, exists := kv.Strings[args[i]]; exists {
 			delete(kv.Strings, args[i])
@@ -315,8 +341,10 @@ func executeEXPIRE(args []string, kv *KeyValueStore, client *Client) string {
 		return "(error) ERR value is not an integer"
 	}
 	var key_exists bool
-	kv.mu.Lock()
-	defer kv.mu.Unlock()
+	if !client.isTxn {
+		kv.mu.Lock()
+		defer kv.mu.Unlock()
+	}
 	if _, exists := kv.Strings[key]; exists {
 		key_exists = true
 	} else if _, exists := kv.Lists[key]; exists {
@@ -338,8 +366,10 @@ func executeTTL(args []string, kv *KeyValueStore, client *Client) string {
 		return "(error) ERR wrong number of arguments for 'TTL' command"
 	}
 	key := args[0]
-	kv.mu.RLock()
-	defer kv.mu.RUnlock()
+	if !client.isTxn {
+		kv.mu.RLock()
+		defer kv.mu.RUnlock()
+	}
 	var key_exists bool
 	if _, exists := kv.Strings[key]; exists {
 		key_exists = true
@@ -398,16 +428,35 @@ func executeDISCARD(args []string, kv *KeyValueStore, client *Client) string {
 	return "OK"
 }
 
-func executeEXEC(args []string, kv *KeyValueStore, client *Client) string {
+func executeEXEC(args []string, kv *KeyValueStore, client *Client) {
 	if client.isTxn {
-		client.isTxn = false
+		fmt.Print("lock takeinggggggg")
 		kv.mu.Lock()
-		defer kv.mu.Lock()
-		executeCommands(client, client.queuedCommands, kv)
+		fmt.Print("lock takenn")
+		defer kv.mu.Unlock()
+
+		execResult := []string{}
+		for _, cmd := range client.queuedCommands {
+			response := executeCommand(cmd, client, kv)
+			if response != "" {
+				execResult = append(execResult, response)
+			}
+		}
+		client.isTxn = false
+		if len(execResult) != 0 {
+			err := WriteArray(execResult, client.conn)
+			if err != nil {
+				fmt.Println("Error writing response:", err)
+			}
+		} else {
+			err := WriteBulkString("(empty array)", client.conn)
+			if err != nil {
+				fmt.Println("Error writing response:", err)
+			}
+		}
 	} else {
-		return "(error) ERR EXEC without MULTI"
+		WriteBulkString("(error) ERR EXEC without MULTI", client.conn)
 	}
-	return "OK"
 }
 
 func executeCommand(cmd Command, client *Client, kv *KeyValueStore) string {
@@ -449,7 +498,8 @@ func executeCommand(cmd Command, client *Client, kv *KeyValueStore) string {
 	case "MULTI":
 		return executeMULTI(cmd.Args, kv, client)
 	case "EXEC":
-		return executeEXEC(cmd.Args, kv, client)
+		executeEXEC(cmd.Args, kv, client)
+		return "OK"
 	case "DISCARD":
 		return executeDISCARD(cmd.Args, kv, client)
 	default:
@@ -472,12 +522,14 @@ func executeCommands(client *Client, commands []Command, kv *KeyValueStore) {
 		} else {
 			response = executeCommand(cmd, client, kv)
 		}
-		fmt.Print("print response: ", response)
-		if response != "" {
-			err := WriteBulkString(response, conn)
-			if err != nil {
-				fmt.Println("Error writing response:", err)
-				break
+		if cmd.Name != "EXEC" {
+			fmt.Print("print response: ", response)
+			if response != "" {
+				err := WriteBulkString(response, conn)
+				if err != nil {
+					fmt.Println("Error writing response:", err)
+					break
+				}
 			}
 		}
 	}
