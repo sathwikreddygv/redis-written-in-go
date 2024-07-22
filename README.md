@@ -22,7 +22,7 @@ To set up godisDB:
 ```
 2. Run the server
 ```
-  go run main.go resp_parser.go resp_writer.go execute_commands.go
+  go run main.go resp_parser.go resp_writer.go execute_commands.go persistence.go
 ```
 
 ### Usage
